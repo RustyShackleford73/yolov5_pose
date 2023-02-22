@@ -1,0 +1,18 @@
+# train and val data as 1) directory: path/images/, 2) file: path/images.txt, or 3) list: [path1/images/, path2/images/]
+train: /home/shackleford/data/coco2017labels-keypoints/train2017.txt  # 118287 images
+val: /home/shackleford/data/coco2017labels-keypoints/val2017.txt  # 5000 images
+test: /home/shackleford/data/coco2017labels-keypoints/test2017.txt
+# train: /content/coco/train/images  # 118287 images
+# val: /content/coco/valid/images  # 5000 images
+# train: [/mnt/purx/fyp/coco_kpts/train2017.txt, /mnt/shares/data/basketball_only/train/images] # 118287 images
+# val: [/mnt/purx/fyp/coco_kpts/val2017.txt, /mnt/shares/data/basketball_only/valid/images]  # 5000 images
+# test: /home/wqg/pyproject/git/yolo/yolov7/weights/yolov7-pose-val.txt  # 20288 of 40670 images, submit to https://competitions.codalab.org/competitions/20794
+
+# number of classes
+nc: 1
+
+#names: [ 'person','person1','person2']
+names: [ 'person']
+
+
+# python train_Ncla_nPoint.py --name tiny --epochs 300 --data data/coco_kpts_colab.yaml --cfg cfg/yolov7-tiny-pose.yaml --weights weights/yolov7-tiny.pt --workers 8 --batch-size 48 --img 640 --kpt-label true --sync-bn true --device 0 --hyp data/hyp.pose12.yaml
