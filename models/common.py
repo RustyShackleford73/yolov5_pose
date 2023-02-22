@@ -16,7 +16,41 @@ from utils.datasets import letterbox
 from utils.general import non_max_suppression, non_max_suppression_export, make_divisible, scale_coords, increment_path, xyxy2xywh, save_one_box
 from utils.plots import colors, plot_one_box
 from utils.torch_utils import time_synchronized
+import warnings
 
+
+
+class SPPF(nn.Module):
+
+	# Spatial Pyramid Pooling - Fast (SPPF) layer for YOLOv5 by Glenn Jocher
+
+	def __init__(self, c1, c2, k=5): # equivalent to SPP(k=(5, 9, 13))
+
+		super().__init__()
+
+		c_ = c1 // 2 # hidden channels
+
+		self.CV1 = Conv(c1, c_, 1, 1)
+
+		self.CV2 = Conv(c_ * 4, c2, 1, 1)
+
+		self.m = nn.MaxPool2d(kernel_size=k, stride=1, padding=k // 2)
+
+
+
+	def forward(self, x):
+
+		x = self.CV1(x)
+
+		with warnings.catch_warnings():
+
+			warnings.simplefilter('ignore') # suppress torch 1.9.0 max_pool2d() warning
+
+			y1 = self.m(x)
+
+			y2 = self.m(y1)
+
+			return self.CV2(torch.cat([x, y1, y2, self.m(y2)], 1))
 
 def autopad(k, p=None):  # kernel, padding
     # Pad to 'same'

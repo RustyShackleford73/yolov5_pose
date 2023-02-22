@@ -97,7 +97,7 @@ def test(data,
             model(torch.zeros(1, 3, imgsz, imgsz).to(device).type_as(next(model.parameters())))  # run once
         task = opt.task if opt.task in ('train', 'val', 'test') else 'val'  # path to train/val/test images
         dataloader = create_dataloader(data[task], imgsz, batch_size, gs, opt, pad=0.5, rect=True,
-                                       prefix=colorstr(f'{task}: '), tidl_load=tidl_load, kpt_label=kpt_label)[0]
+                                       prefix=colorstr(f'{task}: '), tidl_load=tidl_load, kpt_label=kpt_label, kpt_num=model.yaml['nkpt'])[0]
 
     seen = 0
     confusion_matrix = ConfusionMatrix(nc=nc)
@@ -130,7 +130,7 @@ def test(data,
                 model.model[-1].flip_test = False
                 fuse1 = (out + out_flip)/2.0
                 out = torch.cat((out,fuse1), axis=1)
-            out = out[...,:6] if not kpt_label else out
+            out = out[...,:5+nc] if not kpt_label else out
             targets = targets[..., :6] if not kpt_label else targets
             t0 += time_synchronized() - t
 
@@ -177,7 +177,8 @@ def test(data,
             # Append to text file
             if save_txt:
                 gn = torch.tensor(shapes[si][0])[[1, 0, 1, 0]]  # normalization gain whwh
-                for *xyxy, conf, cls in predn.tolist():
+                # for *xyxy, conf, cls in predn.tolist():
+                for *xyxy, conf, cls in predn[:, :6].tolist():
                     xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
                     line = (cls, *xywh, conf) if save_conf else (cls, *xywh)  # label format
                     with open(save_dir / 'labels' / (path.stem + '.txt'), 'a') as f:
@@ -195,9 +196,10 @@ def test(data,
                 if wandb_logger.current_epoch % wandb_logger.bbox_interval == 0:
                     box_data = [{"position": {"minX": xyxy[0], "minY": xyxy[1], "maxX": xyxy[2], "maxY": xyxy[3]},
                                  "class_id": int(cls),
-                                 "box_caption": "%s %.3f" % (names[cls], conf),
+                                 "box_caption": "%s %.3f" % (names[int(cls)], conf),
                                  "scores": {"class_score": conf},
-                                 "domain": "pixel"} for *xyxy, conf, cls in pred.tolist()]
+                                 #  "domain": "pixel"} for *xyxy, conf, cls in pred.tolist()]
+                                 "domain": "pixel"} for *xyxy, conf, cls in predn[:, :6].tolist()]
                     boxes = {"predictions": {"box_data": box_data, "class_labels": names}}  # inference-space
                     wandb_images.append(wandb_logger.wandb.Image(img[si], boxes=boxes, caption=path.name))
             wandb_logger.log_training_progress(predn, path, names) if wandb_logger and wandb_logger.wandb_run else None
@@ -263,11 +265,10 @@ def test(data,
         if plots and batch_i < 3000:
             f = save_dir / f'{path.stem}_labels.jpg'  # labels
             #Thread(target=plot_images, args=(img, targets, paths, f, names), daemon=True).start()
-            plot_images(img, targets, paths, f, names, kpt_label=kpt_label, orig_shape=shapes[si])
+            plot_images(img, targets, paths, f, names, kpt_label=kpt_label, kpt_num=model.yaml['nkpt'], orig_shape=shapes[si])
             f = save_dir / f'{path.stem}_pred.jpg'  # predictions
             #Thread(target=plot_images, args=(img, output_to_target(out), paths, f, names), daemon=True).start()
-            plot_images(img, output_to_target(out), paths, f, names, kpt_label=kpt_label, steps=3, orig_shape=shapes[si])
-
+            plot_images(img, output_to_target(out), paths, f, names, kpt_label=kpt_label, steps=3, kpt_num=model.yaml['nkpt'],orig_shape=shapes[si])
     # Compute statistics
     stats = [np.concatenate(x, 0) for x in zip(*stats)]  # to numpy
     if len(stats) and stats[0].any():
