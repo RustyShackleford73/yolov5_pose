@@ -1,0 +1,1 @@
+python train.py --name scratch --epochs 30 --data data/coco_kpts_local.yaml --cfg models/yolov5s6_kpts_ti_lite.yaml --weights weights/yolov5s.pt --workers 8 --batch-size 64 --img 640 --kpt-label --sync-bn --device 0 --hyp data/hyp.scratch.yaml
